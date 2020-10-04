@@ -22,14 +22,15 @@ const (
 
 // Config defines parameters for the logger
 type Config struct {
-	Level string   `mapstructure:"level"`
-	Stats bool     `mapstructure:"stats"`
-	Fix   []string `mapstructure:"fix"`
+	Level     string   `mapstructure:"level"`
+	Stats     bool     `mapstructure:"stats"`
+	FixByFile []string `mapstructure:"fixbyfile"`
+	FixByFunc []string `mapstructure:"fixbyfunc"`
 }
 
 // Init initializes the package logger.
 // Supported levels are: ["debug", "info", "warn", "error"]
-func Init(level string, fix []string) {
+func Init(level string, fixByFile, fixByFunc []string) {
 	l := zerolog.GlobalLevel()
 	switch level {
 	case "trace":
@@ -54,17 +55,23 @@ func Init(level string, fix []string) {
 	output.FormatMessage = func(i interface{}) string {
 		caller, file, line, _ := runtime.Caller(9)
 		fileName := filepath.Base(file)
+		funcName := strings.TrimPrefix(filepath.Ext((runtime.FuncForPC(caller).Name())), ".")
 		var needfix bool
-		for _, b := range fix {
+		for _, b := range fixByFile {
 			if strings.Contains(fileName, b) {
+				needfix = true
+			}
+		}
+		for _, b := range fixByFunc {
+			if strings.Contains(funcName, b) {
 				needfix = true
 			}
 		}
 		if needfix {
 			caller, file, line, _ = runtime.Caller(8)
 			fileName = filepath.Base(file)
+			funcName = strings.TrimPrefix(filepath.Ext((runtime.FuncForPC(caller).Name())), ".")
 		}
-		funcName := strings.TrimPrefix(filepath.Ext((runtime.FuncForPC(caller).Name())), ".")
 		return fmt.Sprintf("[%d][%s][%s] => %s", line, fileName, funcName, i)
 	}
 
