@@ -6,23 +6,17 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"sync"
 
 	"github.com/rs/zerolog"
 )
 
-var (
-	log zerolog.Logger
-	mu  sync.RWMutex
-)
+var Log zerolog.Logger
 
-const (
-	timeFormat = "2006-01-02 15:04:05.000"
-)
+const timeFormat = "2006-01-02 15:04:05.000"
 
 // Config defines parameters for the logger
 type Config struct {
-	Level     string   `mapstructure:"level"`
+	Level string `mapstructure:"level"`
 }
 
 // Init initializes the package logger.
@@ -72,50 +66,24 @@ func Init(level string, fixByFile, fixByFunc []string) {
 		return fmt.Sprintf("[%d][%s][%s] => %s", line, fileName, funcName, i)
 	}
 
-	mu.Lock()
-	log = zerolog.New(output).Level(l).With().Timestamp().Logger()
-	mu.Unlock()
+	Log = zerolog.New(output).Level(l).With().Timestamp().Logger()
 }
 
 // Infof logs a formatted info level log to the console
-func Infof(format string, v ...interface{}) {
-	mu.RLock()
-	defer mu.RUnlock()
-	log.Info().Msgf(format, v...)
-}
+func Infof(format string, v ...interface{}) { Log.Info().Msgf(format, v...) }
 
 // Tracef logs a formatted debug level log to the console
-func Tracef(format string, v ...interface{}) {
-	mu.RLock()
-	defer mu.RUnlock()
-	log.Trace().Msgf(format, v...)
-}
+func Tracef(format string, v ...interface{}) { Log.Trace().Msgf(format, v...) }
 
 // Debugf logs a formatted debug level log to the console
-func Debugf(format string, v ...interface{}) {
-	mu.RLock()
-	defer mu.RUnlock()
-	log.Debug().Msgf(format, v...)
-}
+func Debugf(format string, v ...interface{}) { Log.Debug().Msgf(format, v...) }
 
 // Warnf logs a formatted warn level log to the console
-func Warnf(format string, v ...interface{}) {
-	mu.RLock()
-	defer mu.RUnlock()
-	log.Warn().Msgf(format, v...)
-}
+func Warnf(format string, v ...interface{}) { Log.Warn().Msgf(format, v...) }
 
 // Errorf logs a formatted error level log to the console
-func Errorf(format string, v ...interface{}) {
-	mu.RLock()
-	defer mu.RUnlock()
-	log.Error().Msgf(format, v...)
-}
+func Errorf(format string, v ...interface{}) { Log.Error().Msgf(format, v...) }
 
 // Panicf logs a formatted panic level log to the console.
 // The panic() function is called, which stops the ordinary flow of a goroutine.
-func Panicf(format string, v ...interface{}) {
-	mu.RLock()
-	defer mu.RUnlock()
-	log.Panic().Msgf(format, v...)
-}
+func Panicf(format string, v ...interface{}) { Log.Panic().Msgf(format, v...) }
