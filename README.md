@@ -8,9 +8,7 @@ import (
 )
 
 func init() {
-	fixByFile := []string{"asm_amd64.s", "proc.go"}
-	fixByFunc := []string{}
-	log.Init("debug", fixByFile, fixByFunc)
+	log.Init("debug")
 }
 
 func main() {
@@ -18,9 +16,11 @@ func main() {
 }
 ```
 ## Feature
-* GoodFormat: [date time] [Level] [Line][File][Func] => YourLog
+GoodFormat: 
 ```
- [2020-11-04 16:13:54.593] [INFO] [14][main.go][main] => Hello ION!
+[date time][file:line][Level][Func] => YourLog
 ```
-* FixByHand: you can fixByFile or fixByFunc when you found the log line not right
+```
+[2021-05-01 17:33:47][main.go:12][INFO][main.main] => Hello ION!
+```
 
