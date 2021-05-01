@@ -122,7 +122,7 @@ func (s *LogFormatter) Format(entry *log.Entry) ([]byte, error) {
 		len = entry.Caller.Line
 	}
 
-	msg := fmt.Sprintf("[%s][%s:%d][%s][%s] %s\n", timestamp, file, len, strings.ToUpper(entry.Level.String()), getFuncName(entry.Caller.Function), entry.Message)
+	msg := fmt.Sprintf("[%s][%s:%d][%s][%s] => %s\n", timestamp, file, len, strings.ToUpper(entry.Level.String()), getFuncName(entry.Caller.Function), entry.Message)
 	return []byte(msg), nil
 }
 
