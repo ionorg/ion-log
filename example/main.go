@@ -4,10 +4,10 @@ import (
 	log "github.com/pion/ion-log"
 )
 
-func init() {
-	log.Init("debug")
-}
+var (
+	logger = log.NewLogger(log.DebugLevel, "example")
+)
 
 func main() {
-	log.Infof("Hello ION!")
+	logger.Info("Hello ION!")
 }

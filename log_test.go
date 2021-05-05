@@ -1,8 +1,13 @@
 package log
 
-import "testing"
+import (
+	"testing"
+)
+
+var (
+	logger = NewLogger(InfoLevel, "test")
+)
 
 func TestLogFormat(t *testing.T) {
-	Init("debug")
-	Infof("Hello %s!", "ION")
+	logger.Info("xxx")
 }
