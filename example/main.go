@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	log "github.com/pion/ion-log"
 )
 
@@ -26,6 +24,6 @@ func main() {
 	loggers := log.GetLoggers()
 
 	for _, logger := range loggers {
-		fmt.Printf("logger prefix = %v\n", logger.Prefix())
+		log.Infof("logger prefix = %v, level = %v", logger.Prefix(), logger.Level())
 	}
 }

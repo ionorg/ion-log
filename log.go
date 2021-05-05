@@ -3,19 +3,14 @@ package log
 import (
 	"fmt"
 	"os"
-	"runtime"
-	"strings"
 	"sync"
 
 	"github.com/sirupsen/logrus"
 )
 
-var (
-	defaultLogger = NewLogger(DebugLevel, "default")
-)
-
 // Level type
 type Level uint32
+type Fields map[string]interface{}
 
 // These are the different logging levels. You can set the logging level to log
 // on your instance of logger, obtained with `logrus.New()`.
@@ -52,77 +47,8 @@ var (
 	logrusPackage      string
 	minimumCallerDepth = 1
 	loggers            = make(map[string]*MyLogger)
+	defaultLogger      = NewLogger(DebugLevel, "default")
 )
-
-type Fields map[string]interface{}
-
-func (fields Fields) String() string {
-	str := make([]string, 0)
-
-	for k, v := range fields {
-		str = append(str, fmt.Sprintf("%s=%+v", k, v))
-	}
-
-	return strings.Join(str, " ")
-}
-
-func getPackageName(f string) string {
-	for {
-		lastPeriod := strings.LastIndex(f, ".")
-		lastSlash := strings.LastIndex(f, "/")
-		if lastPeriod > lastSlash {
-			f = f[:lastPeriod]
-		} else {
-			break
-		}
-	}
-
-	return f
-}
-
-func getFuncName(f string) string {
-	n := strings.LastIndex(f, "/")
-	if n == -1 {
-		return f
-	}
-	return f[n+1:]
-}
-
-// getCaller retrieves the name of the first non-logrus calling function
-func getCaller() *runtime.Frame {
-	// cache this package's fully-qualified name
-	callerInitOnce.Do(func() {
-		pcs := make([]uintptr, maximumCallerDepth)
-		_ = runtime.Callers(0, pcs)
-
-		// dynamic get the package name and the minimum caller depth
-		for i := 0; i < maximumCallerDepth; i++ {
-			funcName := runtime.FuncForPC(pcs[i]).Name()
-			if strings.Contains(funcName, "getCaller") {
-				logrusPackage = getPackageName(funcName)
-				break
-			}
-		}
-
-		minimumCallerDepth = knownLogrusFrames
-	})
-
-	// Restrict the lookback frames to avoid runaway lookups
-	pcs := make([]uintptr, maximumCallerDepth)
-	depth := runtime.Callers(minimumCallerDepth, pcs)
-	frames := runtime.CallersFrames(pcs[:depth])
-
-	for f, again := frames.Next(); again; f, again = frames.Next() {
-		pkg := getPackageName(f.Function)
-		// find the function which is not logrus and ion-log
-		if !strings.Contains(pkg, "logrus") && pkg != logrusPackage {
-			return &f //nolint:scopelint
-		}
-	}
-
-	// if we got here, we failed to find the caller's context
-	return nil
-}
 
 // Infof logs a formatted info level log to the console
 func Infof(format string, v ...interface{}) { defaultLogger.Infof(format, v...) }
@@ -159,16 +85,6 @@ func Init(level string) {
 	}
 	defaultLogger.SetLevel(l)
 }
-
-// get goroutine id
-// func getGID() uint64 {
-// b := make([]byte, 64)
-// b = b[:runtime.Stack(b, false)]
-// b = bytes.TrimPrefix(b, []byte("goroutine "))
-// b = b[:bytes.IndexByte(b, ' ')]
-// n, _ := strconv.ParseUint(string(b), 10, 64)
-// return n
-// }
 
 type MyLogger struct {
 	logger *logrus.Logger
