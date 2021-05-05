@@ -13,6 +13,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var (
+	defaultLogger = NewLogger(DebugLevel, "default")
+)
+
 // Level type
 type Level uint32
 type Fields log.Fields
@@ -132,6 +136,42 @@ func (s *LogFormatter) Format(entry *log.Entry) ([]byte, error) {
 	return []byte(msg), nil
 }
 
+// Infof logs a formatted info level log to the console
+func Infof(format string, v ...interface{}) { defaultLogger.Infof(format, v...) }
+
+// Tracef logs a formatted debug level log to the console
+func Tracef(format string, v ...interface{}) { defaultLogger.Tracef(format, v...) }
+
+// Debugf logs a formatted debug level log to the console
+func Debugf(format string, v ...interface{}) { defaultLogger.Debugf(format, v...) }
+
+// Warnf logs a formatted warn level log to the console
+func Warnf(format string, v ...interface{}) { defaultLogger.Warnf(format, v...) }
+
+// Errorf logs a formatted error level log to the console
+func Errorf(format string, v ...interface{}) { defaultLogger.Errorf(format, v...) }
+
+// Panicf logs a formatted panic level log to the console.
+// The panic() function is called, which stops the ordinary flow of a goroutine.
+func Panicf(format string, v ...interface{}) { defaultLogger.Panicf(format, v...) }
+
+func Init(level string) {
+	l := log.DebugLevel
+	switch level {
+	case "trace":
+		l = log.TraceLevel
+	case "debug":
+		l = log.DebugLevel
+	case "info":
+		l = log.InfoLevel
+	case "warn":
+		l = log.WarnLevel
+	case "error":
+		l = log.ErrorLevel
+	}
+	defaultLogger.SetLevel(l)
+}
+
 // get goroutine id
 // func getGID() uint64 {
 // b := make([]byte, 64)
@@ -166,6 +206,14 @@ func (ml *MyLogger) Level() string {
 		return "Trace"
 	}
 	return "Unkown"
+}
+
+func (ml *MyLogger) Prefix() string {
+	return ml.prefix
+}
+
+func (ml *MyLogger) SetLevel(level Level) {
+	ml.logger.SetLevel(logrus.Level(level))
 }
 
 func NewLogger(level Level, prefix string) *logrus.Logger {
