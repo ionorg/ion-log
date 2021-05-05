@@ -3,14 +3,11 @@ package log
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -19,7 +16,6 @@ var (
 
 // Level type
 type Level uint32
-type Fields log.Fields
 
 // These are the different logging levels. You can set the logging level to log
 // on your instance of logger, obtained with `logrus.New()`.
@@ -58,9 +54,16 @@ var (
 	loggers            = make(map[string]*MyLogger)
 )
 
-type LogFormatter struct {
-	Prefix string
-	Fields string
+type Fields map[string]interface{}
+
+func (fields Fields) String() string {
+	str := make([]string, 0)
+
+	for k, v := range fields {
+		str = append(str, fmt.Sprintf("%s=%+v", k, v))
+	}
+
+	return strings.Join(str, " ")
 }
 
 func getPackageName(f string) string {
@@ -121,21 +124,6 @@ func getCaller() *runtime.Frame {
 	return nil
 }
 
-func (s *LogFormatter) Format(entry *log.Entry) ([]byte, error) {
-	timestamp := time.Now().Local().Format(timeFormat)
-	var file string
-	var len int
-	// use custom getCaller because default getCaller worked bad after we wrapper it
-	entry.Caller = getCaller()
-	if entry.Caller != nil {
-		file = filepath.Base(entry.Caller.File)
-		len = entry.Caller.Line
-	}
-
-	msg := fmt.Sprintf("[%s][%s][%s:%d][%s][%s] => %s\n", timestamp, s.Prefix, file, len, strings.ToUpper(entry.Level.String()), getFuncName(entry.Caller.Function), entry.Message)
-	return []byte(msg), nil
-}
-
 // Infof logs a formatted info level log to the console
 func Infof(format string, v ...interface{}) { defaultLogger.Infof(format, v...) }
 
@@ -156,18 +144,18 @@ func Errorf(format string, v ...interface{}) { defaultLogger.Errorf(format, v...
 func Panicf(format string, v ...interface{}) { defaultLogger.Panicf(format, v...) }
 
 func Init(level string) {
-	l := log.DebugLevel
+	l := logrus.DebugLevel
 	switch level {
 	case "trace":
-		l = log.TraceLevel
+		l = logrus.TraceLevel
 	case "debug":
-		l = log.DebugLevel
+		l = logrus.DebugLevel
 	case "info":
-		l = log.InfoLevel
+		l = logrus.InfoLevel
 	case "warn":
-		l = log.WarnLevel
+		l = logrus.WarnLevel
 	case "error":
-		l = log.ErrorLevel
+		l = logrus.ErrorLevel
 	}
 	defaultLogger.SetLevel(l)
 }
@@ -224,13 +212,41 @@ func NewLogger(level Level, prefix string) *logrus.Logger {
 	l.SetOutput(os.Stdout)
 	l.SetReportCaller(true)
 	l.SetLevel(logrus.Level(level))
-	l.SetFormatter(&LogFormatter{Prefix: prefix})
+	l.SetFormatter(&TextFormatter{
+		Prefix:          prefix,
+		FullTimestamp:   true,
+		TimestampFormat: timeFormat,
+	})
 
 	loggers[prefix] = &MyLogger{
 		logger: l,
 		level:  level,
 		prefix: prefix,
 	}
+	return l
+}
+
+func NewLoggerWithFields(level Level, prefix string, fields Fields) *logrus.Logger {
+	if logger, found := loggers[prefix]; found {
+		return logger.logger
+	}
+	l := logrus.New()
+	l.SetOutput(os.Stdout)
+	l.SetReportCaller(true)
+	l.SetLevel(logrus.Level(level))
+	l.SetFormatter(&TextFormatter{
+		Prefix:          prefix,
+		Fields:          fields,
+		FullTimestamp:   true,
+		TimestampFormat: timeFormat,
+	})
+
+	loggers[prefix] = &MyLogger{
+		logger: l,
+		level:  level,
+		prefix: prefix,
+	}
+
 	return l
 }
 
