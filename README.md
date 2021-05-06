@@ -18,9 +18,9 @@ func main() {
 ## Feature
 GoodFormat: 
 ```
-[date time][file:line][Level][Func] => YourLog
+[date time]  [Level] [Prefix]: [file:line] [Func] YourLog fields=value
 ```
 ```
-[2021-05-01 17:33:47][main.go:12][INFO][main.main] => Hello ION!
+[2021-05-06 09:54:49.658]  INFO default: [log_test.go:19] [ion-log_test.TestDefaultLogger] log with format ION somefield=foo
 ```
 
