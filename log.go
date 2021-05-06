@@ -3,23 +3,14 @@ package log
 import (
 	"fmt"
 	"os"
-	"path/filepath"
-	"runtime"
-	"strings"
 	"sync"
-	"time"
 
 	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
-)
-
-var (
-	defaultLogger = NewLogger(DebugLevel, "default")
 )
 
 // Level type
 type Level uint32
-type Fields log.Fields
+type Fields map[string]interface{}
 
 // These are the different logging levels. You can set the logging level to log
 // on your instance of logger, obtained with `logrus.New()`.
@@ -56,85 +47,8 @@ var (
 	logrusPackage      string
 	minimumCallerDepth = 1
 	loggers            = make(map[string]*MyLogger)
+	defaultLogger      = NewLogger(DebugLevel, "default")
 )
-
-type LogFormatter struct {
-	Prefix string
-	Fields string
-}
-
-func getPackageName(f string) string {
-	for {
-		lastPeriod := strings.LastIndex(f, ".")
-		lastSlash := strings.LastIndex(f, "/")
-		if lastPeriod > lastSlash {
-			f = f[:lastPeriod]
-		} else {
-			break
-		}
-	}
-
-	return f
-}
-
-func getFuncName(f string) string {
-	n := strings.LastIndex(f, "/")
-	if n == -1 {
-		return f
-	}
-	return f[n+1:]
-}
-
-// getCaller retrieves the name of the first non-logrus calling function
-func getCaller() *runtime.Frame {
-	// cache this package's fully-qualified name
-	callerInitOnce.Do(func() {
-		pcs := make([]uintptr, maximumCallerDepth)
-		_ = runtime.Callers(0, pcs)
-
-		// dynamic get the package name and the minimum caller depth
-		for i := 0; i < maximumCallerDepth; i++ {
-			funcName := runtime.FuncForPC(pcs[i]).Name()
-			if strings.Contains(funcName, "getCaller") {
-				logrusPackage = getPackageName(funcName)
-				break
-			}
-		}
-
-		minimumCallerDepth = knownLogrusFrames
-	})
-
-	// Restrict the lookback frames to avoid runaway lookups
-	pcs := make([]uintptr, maximumCallerDepth)
-	depth := runtime.Callers(minimumCallerDepth, pcs)
-	frames := runtime.CallersFrames(pcs[:depth])
-
-	for f, again := frames.Next(); again; f, again = frames.Next() {
-		pkg := getPackageName(f.Function)
-		// find the function which is not logrus and ion-log
-		if !strings.Contains(pkg, "logrus") && pkg != logrusPackage {
-			return &f //nolint:scopelint
-		}
-	}
-
-	// if we got here, we failed to find the caller's context
-	return nil
-}
-
-func (s *LogFormatter) Format(entry *log.Entry) ([]byte, error) {
-	timestamp := time.Now().Local().Format(timeFormat)
-	var file string
-	var len int
-	// use custom getCaller because default getCaller worked bad after we wrapper it
-	entry.Caller = getCaller()
-	if entry.Caller != nil {
-		file = filepath.Base(entry.Caller.File)
-		len = entry.Caller.Line
-	}
-
-	msg := fmt.Sprintf("[%s][%s][%s:%d][%s][%s] => %s\n", timestamp, s.Prefix, file, len, strings.ToUpper(entry.Level.String()), getFuncName(entry.Caller.Function), entry.Message)
-	return []byte(msg), nil
-}
 
 // Infof logs a formatted info level log to the console
 func Infof(format string, v ...interface{}) { defaultLogger.Infof(format, v...) }
@@ -156,31 +70,21 @@ func Errorf(format string, v ...interface{}) { defaultLogger.Errorf(format, v...
 func Panicf(format string, v ...interface{}) { defaultLogger.Panicf(format, v...) }
 
 func Init(level string) {
-	l := log.DebugLevel
+	l := logrus.DebugLevel
 	switch level {
 	case "trace":
-		l = log.TraceLevel
+		l = logrus.TraceLevel
 	case "debug":
-		l = log.DebugLevel
+		l = logrus.DebugLevel
 	case "info":
-		l = log.InfoLevel
+		l = logrus.InfoLevel
 	case "warn":
-		l = log.WarnLevel
+		l = logrus.WarnLevel
 	case "error":
-		l = log.ErrorLevel
+		l = logrus.ErrorLevel
 	}
 	defaultLogger.SetLevel(l)
 }
-
-// get goroutine id
-// func getGID() uint64 {
-// b := make([]byte, 64)
-// b = b[:runtime.Stack(b, false)]
-// b = bytes.TrimPrefix(b, []byte("goroutine "))
-// b = b[:bytes.IndexByte(b, ' ')]
-// n, _ := strconv.ParseUint(string(b), 10, 64)
-// return n
-// }
 
 type MyLogger struct {
 	logger *logrus.Logger
@@ -224,13 +128,41 @@ func NewLogger(level Level, prefix string) *logrus.Logger {
 	l.SetOutput(os.Stdout)
 	l.SetReportCaller(true)
 	l.SetLevel(logrus.Level(level))
-	l.SetFormatter(&LogFormatter{Prefix: prefix})
+	l.SetFormatter(&TextFormatter{
+		Prefix:          prefix,
+		FullTimestamp:   true,
+		TimestampFormat: timeFormat,
+	})
 
 	loggers[prefix] = &MyLogger{
 		logger: l,
 		level:  level,
 		prefix: prefix,
 	}
+	return l
+}
+
+func NewLoggerWithFields(level Level, prefix string, fields Fields) *logrus.Logger {
+	if logger, found := loggers[prefix]; found {
+		return logger.logger
+	}
+	l := logrus.New()
+	l.SetOutput(os.Stdout)
+	l.SetReportCaller(true)
+	l.SetLevel(logrus.Level(level))
+	l.SetFormatter(&TextFormatter{
+		Prefix:          prefix,
+		Fields:          fields,
+		FullTimestamp:   true,
+		TimestampFormat: timeFormat,
+	})
+
+	loggers[prefix] = &MyLogger{
+		logger: l,
+		level:  level,
+		prefix: prefix,
+	}
+
 	return l
 }
 

@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	logger = log.NewLogger(log.InfoLevel, "test")
+	logger = log.NewLoggerWithFields(log.InfoLevel, "test", log.Fields{"fields": "value"})
 )
 
 func TestLogFormat(t *testing.T) {
