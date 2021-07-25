@@ -70,6 +70,10 @@ func Errorf(format string, v ...interface{}) { defaultLogger.Errorf(format, v...
 func Panicf(format string, v ...interface{}) { defaultLogger.Panicf(format, v...) }
 
 func Init(level string) {
+	defaultLogger.SetLevel(logrus.Level(StringToLevel(level)))
+}
+
+func StringToLevel(level string) Level {
 	l := logrus.DebugLevel
 	switch level {
 	case "trace":
@@ -83,7 +87,7 @@ func Init(level string) {
 	case "error":
 		l = logrus.ErrorLevel
 	}
-	defaultLogger.SetLevel(l)
+	return Level(l)
 }
 
 type MyLogger struct {
