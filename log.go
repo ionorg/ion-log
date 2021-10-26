@@ -47,7 +47,9 @@ var (
 	logrusPackage      string
 	minimumCallerDepth = 1
 	loggers            = make(map[string]*MyLogger)
-	defaultLogger      = NewLogger(DebugLevel, "default")
+	loggersLock        sync.RWMutex
+
+	defaultLogger = NewLogger(DebugLevel, "default")
 )
 
 // Infof logs a formatted info level log to the console
@@ -125,9 +127,12 @@ func (ml *MyLogger) SetLevel(level Level) {
 }
 
 func NewLogger(level Level, prefix string) *logrus.Logger {
+	loggersLock.RLock()
 	if logger, found := loggers[prefix]; found {
+		loggersLock.RUnlock()
 		return logger.logger
 	}
+	loggersLock.RUnlock()
 	l := logrus.New()
 	l.SetOutput(os.Stdout)
 	l.SetReportCaller(true)
@@ -138,11 +143,13 @@ func NewLogger(level Level, prefix string) *logrus.Logger {
 		TimestampFormat: timeFormat,
 	})
 
+	loggersLock.Lock()
 	loggers[prefix] = &MyLogger{
 		logger: l,
 		level:  level,
 		prefix: prefix,
 	}
+	loggersLock.Unlock()
 	return l
 }
 
