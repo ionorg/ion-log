@@ -141,6 +141,7 @@ func NewLogger(level Level, prefix string) *logrus.Logger {
 		Prefix:          prefix,
 		FullTimestamp:   true,
 		TimestampFormat: timeFormat,
+		ForceFormatting: true,
 	})
 
 	loggersLock.Lock()
